@@ -36,6 +36,32 @@ architecture rb_cpu_arch of rb_cpu is
 		  res		: out std_logic_vector(31 downto 0)
 	);
 	end component;
+	
+	component rb_control
+	port ( cmd		: in  std_logic_vector(5 downto 0);
+		   funct	: in  std_logic_vector(5 downto 0);
+		   alu_zero	: in  std_logic;
+		   pc_sel	: out std_logic;
+		   reg_dst	: out std_logic;
+		   reg_we	: out std_logic;
+		   alu_sel	: out std_logic;
+		   alu_control: out std_logic_vector(2 downto 0)
+		 );
+	end component;
+	
+	component rb_register_file
+	port ( 	clk		: in  std_logic;
+			a0		: in  std_logic_vector(4 downto 0);
+			a1		: in  std_logic_vector(4 downto 0);
+			a2		: in  std_logic_vector(4 downto 0);
+			a3		: in  std_logic_vector(4 downto 0);
+			rd0		: out std_logic_vector(31 downto 0);
+			rd1		: out std_logic_vector(31 downto 0);
+			rd2		: out std_logic_vector(31 downto 0);
+			reg_w   : in  std_logic_vector(31 downto 0);
+			we		: in  std_logic
+		 );
+	end component;
 
 	signal pc_sel	: std_logic;
 
@@ -53,9 +79,15 @@ architecture rb_cpu_arch of rb_cpu is
 	signal alu_control	: std_logic_vector(2 downto 0);
 	signal alu_zero	: std_logic;
 	
+	signal a3	: std_logic_vector(4 downto 0);
+	
+	signal rd0	: std_logic_vector(31 downto 0);
 	signal rd1	: std_logic_vector(31 downto 0);
 	signal rd2	: std_logic_vector(31 downto 0);
 	signal wd3	: std_logic_vector(31 downto 0);
+	
+	signal reg_dst  : std_logic;
+	signal reg_we	: std_logic;
 begin
 
 	pcNext <= std_logic_vector(unsigned(pc) + 1);
@@ -96,6 +128,32 @@ begin
 		shamt => unsigned(instr(10 downto 6)),
 		zero => alu_zero,
 		res => wd3
+	);
+	
+	controller: rb_control port map (
+		cmd => instr(31 downto 26),
+		funct => instr(5 downto 0),
+		alu_zero => alu_zero,
+		pc_sel => pc_sel,
+		reg_dst => reg_dst,
+		reg_we => reg_we,
+		alu_sel	=> alu_sel,
+		alu_control => alu_control
+	);
+	
+	a3 <= instr(15 downto 11) when reg_dst = '1' else instr(20 downto 16);
+	
+	registers: rb_register_file port map (
+			clk => i_clk,
+			a0 => raddr,
+			a1 => instr(25 downto 21),
+			a2 => instr(20 downto 16),
+			a3 => a3,
+			rd0	=> rd0,
+			rd1 => rd1,
+			rd2 => rd2,
+			reg_w => wd3,
+			we => reg_we
 	);
 	     
 end rb_cpu_arch;
